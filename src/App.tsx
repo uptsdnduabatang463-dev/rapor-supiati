@@ -58,7 +58,7 @@ interface KehadiranData {
 }
 
 const endpoint =
-  "https://script.google.com/macros/s/AKfycbwqyabeec4roqL_aOAdC5tKOn7bAdqXJIOMs_oKOwNa8-j1YYJoM_zSO5dtGRj7kD2Q2g/exec";
+  "https://script.google.com/macros/s/AKfycbwASFE6GY0fYBdKU6b7XDq841mQRhf4b9qLaqnV57kfLuvHZZ196p4WcMzrRnVACMzJcA/exec";
 
 const throttle = (func: Function, delay: number) => {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -1023,9 +1023,20 @@ const InputNilai = () => {
   const fetchTPDetails = async (
     tpCode: string,
     mapel: string,
-    rowIndex: number
+    rowIndex: number,
+    kelas: string = "",
+    semester: string = ""
   ) => {
-    console.log("Fetching TP:", tpCode, "for Mapel:", mapel);
+    console.log(
+      "Fetching TP:",
+      tpCode,
+      "Mapel:",
+      mapel,
+      "Kelas:",
+      kelas,
+      "Semester:",
+      semester
+    );
 
     setLoadingTP(true);
     setShowTPPopup(true);
@@ -1034,15 +1045,14 @@ const InputNilai = () => {
     try {
       const url = `${endpoint}?sheet=DataTP&tp=${encodeURIComponent(
         tpCode
-      )}&mapel=${encodeURIComponent(mapel)}`;
-      console.log("Request URL:", url);
+      )}&mapel=${encodeURIComponent(mapel)}&kelas=${encodeURIComponent(
+        kelas
+      )}&semester=${encodeURIComponent(semester)}`;
 
       const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch TP details");
 
       const tpData = await response.json();
-      console.log("Response data:", tpData);
-
       setTPDetails(tpData);
     } catch (err) {
       console.error("Error fetching TP details:", err);
@@ -2495,7 +2505,10 @@ const InputNilai = () => {
                         const tpCode =
                           displayHeaders[headers.indexOf(currentHeader)];
                         const mapel = actualData[0]?.Data1 || "";
-                        fetchTPDetails(tpCode, mapel, 0);
+                        const kelasRaw = actualData[0]?.Data3 || "";
+                        const kelas = kelasRaw.replace(/[^0-9]/g, ""); // "6A" → "6"
+                        const semester = actualData[0]?.Data2 || "";
+                        fetchTPDetails(tpCode, mapel, 0, kelas, semester);
                       }
                     }}
                     style={{
@@ -11789,16 +11802,7 @@ const RekapNilai = () => {
           ? `Rekap_Nilai_Semua_Kelas_Sem${selectedSemester}.xlsx`
           : `Rekap_Nilai_Kelas${selectedKelas}_Sem${selectedSemester}.xlsx`;
 
-      const wbout = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-const blob = new Blob([wbout], {
-  type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-});
-const url = URL.createObjectURL(blob);
-const a = document.createElement("a");
-a.href = url;
-a.download = fileName;
-a.click();
-setTimeout(() => URL.revokeObjectURL(url), 5000);
+      XLSX.writeFile(workbook, fileName);
     } catch (err) {
       alert(
         "❌ Gagal membuat Excel: " +
